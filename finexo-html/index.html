@@ -2,352 +2,187 @@
 <html>
 
 <head>
-  <!-- Basic -->
-  <meta charset="utf-8" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <!-- Mobile Metas -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-  <!-- Site Metas -->
-  <meta name="keywords" content="" />
-  <meta name="description" content="" />
-  <meta name="author" content="" />
-  <link rel="shortcut icon" href="images/favicon.png" type="">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modbus RTU</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-  <title> Finexo </title>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f1f1f1;
+    }
 
-  <!-- bootstrap core css -->
-  <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
+    .header {
+      padding: 15px;
+      font-size: 25px;
+      text-align: center;
+      background: white;
+    }
 
-  <!-- fonts style -->
-  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    .rightcolumn {
+      width: 100%;
+    }
 
-  <!--owl slider stylesheet -->
-  <link rel="stylesheet" type="text/css"
-    href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css" />
+    .card {
+      background-color: white;
+      padding: 20px;
+      margin-top: 20px;
+    }
 
-  <!-- font awesome style -->
-  <link href="css/font-awesome.min.css" rel="stylesheet" />
+    .row:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
 
-  <!-- Custom styles for this template -->
-  <link href="css/style.css" rel="stylesheet" />
-  <!-- responsive style -->
-  <link href="css/responsive.css" rel="stylesheet" />
+    .footer {
+      padding: 5px;
+      text-align: center;
+      background: #ddd;
+      margin-top: 10px;
+      font-size: 12px;
+    }
 
+    @media screen and (max-width: 800px) {
+      .rightcolumn {
+        padding: 0;
+      }
+    }
+
+    .co {
+      float: left;
+      width: 25%;
+      padding: 0 10px;
+    }
+
+    .ro {
+      margin: 0 -5px;
+    }
+
+    .ro:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+
+    @media screen and (max-width: 600px) {
+      .co {
+        width: 100%;
+        display: block;
+      }
+    }
+
+    .ca {
+      box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+      padding: 16px;
+      text-align: center;
+      background-color: #f1f1f1;
+    }
+  </style>
 </head>
 
 <body>
-
-  <div class="hero_area">
-
-    <div class="hero_bg_box">
-      <div class="bg_img_box">
-        <img src="images/hero-bg.png" alt="">
-      </div>
-    </div>
-
-
-
-    <!-- end header section -->
-    <!-- slider section -->
-    <section class="slider_section ">
-      <div id="customCarousel1" class="carousel slide" data-ride="carousel">
-        <div class="carousel-inner">
-          <div class="carousel-item active">
-            <div class="container ">
-              <div class="row">
-                <div class="col-md-6 ">
-                  <div class="detail-box">
-                    <h1>
-                      Modbus
-                    </h1>
-                    <p>
-                      
-                    </p>
-                    <div class="btn-box">
-                      <a href="" class="btn1">
-                        Read More
-                      </a>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="img-box">
-                    <img src="images/modbus_img.png" alt="">
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-    <!-- end slider section -->
+  <div class="header">
+    <h2>Truyền thông Modbus RTU</h2>
+    <p>Web điều khiển động cơ 3 pha qua biến tần WJ200 Hitachi 16 cấp tốc độ qua truyền thông Modbus RTU</p>
   </div>
 
-
-  <!-- service section -->
-  <section class="service_section layout_padding">
-    <div class="service_container">
-      <div class="container ">
-        <div class="heading_container heading_center">
-          <h2>
-            Our <span>Services</span>
-          </h2>
-          <p>
-            There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration
-          </p>
-        </div>
-        <div class="row">
-          <div class="col-md-4 ">
-            <div class="box ">
-              <div class="img-box">
-                <img src="images/s1.png" alt="">
-              </div>
-              <div class="detail-box">
-                <h5>
-                  Currency Wallet
-                </h5>
-                <p>
-                  fact that a reader will be distracted by the readable content of a page when looking at its layout.
-                  The
-                  point of using
-                </p>
-                <a href="">
-                  Read More
-                </a>
-              </div>
+  <div class="row">
+    <div class="rightcolumn">
+      <div class="card">
+        <h2>Điều khiển và Giám sát</h2>
+        <div class="ro">
+          <div class="co">
+            <div class="ca">
+              <h3>Điều khiển & Cài Đặt</h3>
+              <strong>Trạng thái hoạt động: <span id="Statusbt">---</span></strong>
+              <p><button onclick="control_inverter(1)">Chạy/Dừng</button></p>
+              <strong>Cấp độ: <span id="Levelbt">---</span></strong>
+              <p>
+                <button onclick="control_inverter(2)">Tăng</button>
+                <button onclick="control_inverter(3)">Giảm</button>
+              </p>
+              <strong>Vị trí điều khiển gần nhất: <span id="Local_control">---</span></strong>
             </div>
           </div>
-          <div class="col-md-4 ">
-            <div class="box ">
-              <div class="img-box">
-                <img src="images/s2.png" alt="">
-              </div>
-              <div class="detail-box">
-                <h5>
-                  Security Storage
-                </h5>
-                <p>
-                  fact that a reader will be distracted by the readable content of a page when looking at its layout.
-                  The
-                  point of using
-                </p>
-                <a href="">
-                  Read More
-                </a>
-              </div>
+          <div class="co">
+            <div class="ca">
+              <h3>Thông số cài đặt</h3>
+              <p><strong>Cấp độ cài đặt: <span id="Level_set">---</span></strong></p>
+              <p><strong>Tần số cài đặt: <span id="Freq_set">---</span>[Hz]</strong></p>
+              <p><strong>Chiều quay cài đặt: <span id="Direction_set">---</span></strong></p>
             </div>
           </div>
-          <div class="col-md-4 ">
-            <div class="box ">
-              <div class="img-box">
-                <img src="images/s3.png" alt="">
-              </div>
-              <div class="detail-box">
-                <h5>
-                  Expert Support
-                </h5>
-                <p>
-                  fact that a reader will be distracted by the readable content of a page when looking at its layout.
-                  The
-                  point of using
-                </p>
-                <a href="">
-                  Read More
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="btn-box">
-          <a href="">
-            View All
-          </a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- end service section -->
-
-  <!-- team section -->
-  <section class="team_section layout_padding">
-    <div class="container-fluid">
-      <div class="heading_container heading_center">
-        <h2 class="">
-          Our <span> Team</span>
-        </h2>
-      </div>
-
-      <div class="team_container">
-
-        <div class="row">
-          <div class="col-lg-3 col-sm-6">
-            <div class="box ">
-              <div class="img-box">
-                <img src="images/team-1.jpg" class="img1" alt="">
-              </div>
-              <div class="detail-box">
-                <h5>
-                  Joseph Brown
-                </h5>
-                <p>
-                  Marketing Head
-                </p>
-              </div>
-              <div class="social_box">
-                <a href="#">
-                  <i class="fa fa-facebook" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-twitter" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-linkedin" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-instagram" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-youtube-play" aria-hidden="true"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-
-
-          <div class="col-lg-3 col-sm-6">
-            <div class="box ">
-              <div class="img-box">
-                <img src="images/team-2.jpg" class="img1" alt="">
-              </div>
-              <div class="detail-box">
-                <h5>
-                  Nancy White
-                </h5>
-                <p>
-                  Marketing Head
-                </p>
-              </div>
-              <div class="social_box">
-                <a href="#">
-                  <i class="fa fa-facebook" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-twitter" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-linkedin" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-instagram" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-youtube-play" aria-hidden="true"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-
-
-          <div class="col-lg-3 col-sm-6">
-            <div class="box ">
-              <div class="img-box">
-                <img src="images/team-3.jpg" class="img1" alt="">
-              </div>
-              <div class="detail-box">
-                <h5>
-                  Earl Martinez
-                </h5>
-                <p>
-                  Marketing Head
-                </p>
-              </div>
-              <div class="social_box">
-                <a href="#">
-                  <i class="fa fa-facebook" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-twitter" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-linkedin" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-instagram" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-youtube-play" aria-hidden="true"></i>
-                </a>
-              </div>
-            </div>
-          </div>
-          <div class="col-lg-3 col-sm-6">
-            <div class="box ">
-              <div class="img-box">
-                <img src="images/team-4.jpg" class="img1" alt="">
-              </div>
-              <div class="detail-box">
-                <h5>
-                  Josephine Allard
-                </h5>
-                <p>
-                  Marketing Head
-                </p>
-              </div>
-              <div class="social_box">
-                <a href="#">
-                  <i class="fa fa-facebook" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-twitter" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-linkedin" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-instagram" aria-hidden="true"></i>
-                </a>
-                <a href="#">
-                  <i class="fa fa-youtube-play" aria-hidden="true"></i>
-                </a>
-              </div>
+          <div class="co">
+            <div class="ca">
+              <h3>Thông số thực tế</h3>
+              <p><strong>Tần số thực tế: <span id="Freq_real">---</span>[Hz]</strong></p>
+              <p><strong>Chiều quay thực: <span id="Direction_real">---</span></strong></p>
+              <p><strong>Vận tốc hiện tại: <span id="Speed_current">---</span>RPM</strong></p>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
-  <!-- end team section -->
+  </div>
+  <div class="footer">
+    <h5>Copyright © 2023 - 2024 Trò chơi của thầy</h5>
+  </div>
 
-  <!-- footer section -->
-  <section class="footer_section">
-    <div class="container">
-      <p>
-        &copy; <span id="displayYear"></span> All Rights Reserved By
-        <a href="https://html.design/">Free Html Templates</a>
-      </p>
-    </div>
-  </section>
-  <!-- footer section -->
+  <script>
+    function control_inverter(index) {
+      sendRequest(index, "Status");
+    }
 
-  <!-- jQery -->
-  <script type="text/javascript" src="js/jquery-3.4.1.min.js"></script>
-  <!-- popper js -->
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
-    integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous">
-    </script>
-  <!-- bootstrap js -->
-  <script type="text/javascript" src="js/bootstrap.js"></script>
-  <!-- owl slider -->
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js">
+    function sendRelayRequest(index, state) {
+      fetch("Relay_" + index + "=" + state)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Lỗi kết nối mạng");
+          }
+        })
+        .catch((error) => {
+          console.error("Có vấn đề xảy ra trong quá trình fetch:", error);
+        });
+    }
+
+    function ajaxLoad(ajaxURL) {
+      fetch(ajaxURL)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.text();
+        })
+        .then((data) => {
+          var tmpArray = data.split("|", 9);
+          document.getElementById("Statusbt").innerHTML = tmpArray[0];
+          document.getElementById("Levelbt").innerHTML = tmpArray[1];
+          document.getElementById("Local_control").innerHTML = tmpArray[2];
+          document.getElementById("Level_set").innerHTML = tmpArray[3];
+          document.getElementById("Freq_set").innerHTML = tmpArray[4];
+          document.getElementById("Direction_set").innerHTML = tmpArray[5];
+          document.getElementById("Freq_real").innerHTML = tmpArray[6];
+          document.getElementById("Direction_real").innerHTML = tmpArray[7];
+          document.getElementById("Speed_current").innerHTML = tmpArray[8];
+        })
+        .catch((error) => {
+          console.error(
+            "There was a problem with the fetch operation:",
+            error
+          );
+        });
+    }
+    function update_data() {
+      ajaxLoad("get_data");
+    }
+    setInterval(update_data, 1000);
   </script>
-  <!-- custom js -->
-  <script type="text/javascript" src="js/custom.js"></script>
-  <!-- Google Map -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCh39n5U-4IoWpsVGUHWdqB6puEkhRLdmI&callback=myMap">
-  </script>
-  <!-- End Google Map -->
+
 
 </body>
 

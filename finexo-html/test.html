@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title> Modbus RTU </title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    /* Add a gray background color with some padding */
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f1f1f1;
+    }
+
+    /* Header/Blog Title */
+    .header {
+      padding: 15px;
+      /* Giảm padding */
+      font-size: 25px;
+      /* Giảm font-size */
+      text-align: center;
+      background: white;
+    }
+
+    /* Right column */
+    .rightcolumn {
+      float: left;
+      width: 100%;
+
+    }
+    /* Add a card effect for articles */
+    .card {
+      background-color: white;
+      padding: 20px;
+      margin-top: 20px;
+    }
+
+    /* Clear floats after the columns */
+    .row:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+
+    /* Footer */
+    .footer {
+      padding: 5px;
+      /* Giảm padding */
+      text-align: center;
+      background: #ddd;
+      margin-top: 10px;
+      /* Giữ margin-top ở mức tương đối */
+      font-size: 12px;
+      /* Giảm font-size */
+    }
+
+    /* Responsive layout - when the screen is less than 800px wide, make the two columns stack on top of each other instead of next to each other */
+    @media screen and (max-width: 800px) {
+
+      .leftcolumn,
+      .rightcolumn {
+        width: 100%;
+        padding: 0;
+      }
+    }
+
+    /* Float four columns side by side */
+    .co {
+      float: left;
+      width: 25%;
+      padding: 0 10px;
+      margin-bottom: 20px;
+    }
+
+    /* Remove extra left and right margins, due to padding */
+    .ro {
+      margin: 0 -5px;
+    }
+
+    /* Clear floats after the columns */
+    .ro:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
+
+    /* Responsive columns */
+    @media screen and (max-width: 600px) {
+      .co {
+        width: 100%;
+        display: block;
+        margin-bottom: 20px;
+      }
+    }
+
+    /* Style the counter cards */
+    .ca {
+      box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+      padding: 16px;
+      text-align: center;
+      background-color: #f1f1f1;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h2>
+      Truyền thông <span>Modbus RTU</span>
+    </h2>
+    <p>
+      Web điều khiển động cơ 3 pha qua biến tần WJ200 Hitachi 16 cấp tốc độ qua truyền thông Modbus RTU
+    </p>
+  </div>
+
+  <div class="row">
+    <div class="rightcolumn">
+      <div class="card">
+        <h2>Điều khiển và Giám sát</h2>
+        <div class="ro">
+          <div class="co">
+            <div class="ca">
+              <h3>
+                Điều khiển & Cài Đặt
+              </h3>
+
+              <strong>Trạng thái hoạt động: <span id="Statusbt">---</span></strong>
+              <p>
+                <button onclick="control_inverter(1)">Chạy/Dừng</button>
+              </p>
+              <strong>Cấp độ: <span id="Levelbt">---</span></strong>
+              <p>
+                <button onclick="control_inverter(2)">Tăng</button>
+                <button onclick="control_inverter(3)">Giảm</button>
+              </p>
+              <strong>Vị trí điều khiển gần nhất: <span id="Local_control">---</span></strong>
+            </div>
+          </div>
+
+          <div class="co">
+            <div class="ca">
+              <h3>
+                Thông số cài đặt
+
+              </h3>
+              <p>
+                <strong>Cấp độ: <span id="Level_set">---</span></strong>
+              </p>
+              <p>
+                <strong>Tần số cài đặt: <span id="Freq_set">---</span>[Hz]</strong>
+              </p>
+              <p>
+                <strong>Chiều quay cài đăt: <span id="Direction_set">---</span></strong>
+              </p>
+            </div>
+          </div>
+          <div class="co">
+            <div class="ca">
+              <h3>
+                Thông số thực tế
+              </h3>
+              <p>
+                <strong>Tần số thực tế: <span id="Freq_set">---</span></strong>
+              </p>
+              <p>
+                <strong>Chiều quay thực: <span id="Direction_set">---</span>[Hz]</strong>
+              </p>
+              <p>
+                <strong>Vận tốc hiện tại: <span id="Freq_set">---</span>vòng/phút</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <h5>Copyright © 2023 - 2024 Trò chơi của thầy</h5>
+  </div>
+</body>
+
+</html>
