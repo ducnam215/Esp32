@@ -1,48 +1,49 @@
 #include <Arduino.h>
-#include <ModbusMaster.h> //Library for using ModbusMaster
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-#include "config.h"
+#include <LiquidCrystal_I2C.h>
+#include <ModbusMaster.h> //Library for using ModbusMaster
+#include <Register_inverter.h>
 
 #define Slave_ID 1
+
+const char *ssid = "Samsung Galaxy Z Flip4";
+const char *password = "241810697";
 
 #define Btn_Start 27
 #define Btn_Up 26
 #define Btn_Down 25
 
-#define Out_Start 13
-#define Out_Stop 14
-
-bool flag = false;
-
 uint8_t Value_Start, Value_Up, Value_Down;
 uint8_t Default_Start = 1, Default_Up = 1, Default_Down = 1;
-uint8_t Count_Start = 0, Count_Level = 0;
-uint8_t Count_Local = 0, inputLevel;
+uint8_t Count_Start = 0, Count_Level = 0, inputLevel = 0;
+uint8_t Count_Local = 0;
 
-uint16_t Chieu_quay_thuc_te;
-uint16_t Tan_so_thuc_te, inputFreq;
+uint16_t Tan_so_thuc_te, Chieu_quay_thuc_te, inputFreq;
 uint16_t Cap_cuc, Speed_RPM;
+uint16_t Trang_thai, Nguon, Cuong_do, Hieu_dien_the;
 
-String inputStatus;
-String inputLocal;
+const uint16_t frequencies[] = {500, 1000, 1500, 2000, 2500, 3000, 3500, 4000,
+                                500, 1000, 1500, 2000, 2500, 3000, 3500, 4000};
+
+const bool directions[] = {Forward, Forward, Forward, Forward, Forward, Forward, Forward, Forward,
+                           Reverse, Reverse, Reverse, Reverse, Reverse, Reverse, Reverse, Reverse};
 
 const uint8_t pole[] = {0, 2, 4, 6, 8, 10, 12, 14};
 
+unsigned long timer1 = 0;
+
+bool flag = false;
+
+String inputStatus;
+String inputLocal;
+String inputDirectionset;
+String inputTrangthai;
+String inputChieuquaythuc;
+
 ModbusMaster node;
 LiquidCrystal_I2C lcd(0x27, 16, 2);
-
-const char *ssid = "Samsung Galaxy Z Flip4";
-const char *password = "241810697";
-
-void Control_RunStop(bool Status);
-void Frequency_setting(uint16_t Speed);
-void Select_Rotation_Direction(bool Status);
-void Operational_information_of_the_inverter(void);
-
 AsyncWebServer server(80);
 
 const char index_html[] PROGMEM = R"rawliteral(
@@ -50,42 +51,36 @@ const char index_html[] PROGMEM = R"rawliteral(
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Modbus RTU</title>
   <style>
     * {
       box-sizing: border-box;
     }
-
     body {
       font-family: Arial;
       padding: 20px;
       background: #f1f1f1;
     }
-
     .header {
       padding: 15px;
       font-size: 25px;
       text-align: center;
       background: white;
     }
-
     .rightcolumn {
       width: 100%;
     }
-
     .card {
       background-color: white;
       padding: 20px;
       margin-top: 20px;
     }
-
     .row:after {
       content: "";
       display: table;
       clear: both;
     }
-
     .footer {
       padding: 5px;
       text-align: center;
@@ -93,36 +88,30 @@ const char index_html[] PROGMEM = R"rawliteral(
       margin-top: 10px;
       font-size: 12px;
     }
-
     @media screen and (max-width: 800px) {
       .rightcolumn {
         padding: 0;
       }
     }
-
     .co {
       float: left;
       width: 25%;
       padding: 0 10px;
     }
-
     .ro {
       margin: 0 -5px;
     }
-
     .ro:after {
       content: "";
       display: table;
       clear: both;
     }
-
     @media screen and (max-width: 600px) {
       .co {
         width: 100%;
         display: block;
       }
     }
-
     .ca {
       box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
       padding: 16px;
@@ -131,12 +120,12 @@ const char index_html[] PROGMEM = R"rawliteral(
     }
   </style>
 </head>
-
 <body>
   <div class="header">
     <h2>Truyền thông Modbus RTU</h2>
     <p>Web điều khiển động cơ 3 pha qua biến tần WJ200 Hitachi 16 cấp tốc độ qua truyền thông Modbus RTU</p>
   </div>
+
   <div class="row">
     <div class="rightcolumn">
       <div class="card">
@@ -155,6 +144,7 @@ const char index_html[] PROGMEM = R"rawliteral(
               <strong>Vị trí điều khiển gần nhất: <span id="Local_control">---</span></strong>
             </div>
           </div>
+
           <div class="co">
             <div class="ca">
               <h3>Thông số cài đặt</h3>
@@ -163,27 +153,39 @@ const char index_html[] PROGMEM = R"rawliteral(
               <p><strong>Chiều quay cài đặt: <span id="Direction_set">---</span></strong></p>
             </div>
           </div>
+
           <div class="co">
             <div class="ca">
               <h3>Thông số thực tế</h3>
+              <p><strong>Trạng Thái: <span id="Status_real">---</span></strong></p>
               <p><strong>Tần số thực tế: <span id="Freq_real">---</span>[Hz]</strong></p>
               <p><strong>Chiều quay thực: <span id="Direction_real">---</span></strong></p>
-              <p><strong>Vận tốc hiện tại: <span id="Speed_current">---</span>RPM</strong></p>
+              <p><strong>Vận tốc hiện tại: <span id="Speed_current">---</span>[RPM]</strong></p>
             </div>
           </div>
+
+          <div class="co">
+            <div class="ca">
+              <h3>Thông tin thêm</h3>
+              <p><strong>Nguồn điện: <span id="Power_monitor">---</span>[kW]</strong></p>
+              <p><strong>Cường độ dòng điện: <span id="Current_monitor">---</span> [A]</strong></p>
+              <p><strong>Hiệu điện thế: <span id="Voltage_monitor">---</span>[V]</strong></p>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
   </div>
   <div class="footer">
-    <h5>Copyright © 2023 - 2024 Trò chơi của thầy</h5>
+    <h5>Copyright © 2023 - 2024 Trò chơi của Phạm Đức Nam</h5>
   </div>
   <script>
     function control_inverter(index) {
       sendRequest(index, "Status");
     }
-    function sendRelayRequest(index, state) {
-      fetch("Relay_" + index + "=" + state)
+    function sendRequest(index, state) {
+      fetch("Request_" + index + "=" + state)
         .then((response) => {
           if (!response.ok) {
             throw new Error("Lỗi kết nối mạng");
@@ -202,16 +204,20 @@ const char index_html[] PROGMEM = R"rawliteral(
           return response.text();
         })
         .then((data) => {
-          var tmpArray = data.split("|", 9);
+          var tmpArray = data.split("|", 13);
           document.getElementById("Statusbt").innerHTML = tmpArray[0];
           document.getElementById("Levelbt").innerHTML = tmpArray[1];
           document.getElementById("Local_control").innerHTML = tmpArray[2];
           document.getElementById("Level_set").innerHTML = tmpArray[3];
           document.getElementById("Freq_set").innerHTML = tmpArray[4];
           document.getElementById("Direction_set").innerHTML = tmpArray[5];
-          document.getElementById("Freq_real").innerHTML = tmpArray[6];
-          document.getElementById("Direction_real").innerHTML = tmpArray[7];
-          document.getElementById("Speed_current").innerHTML = tmpArray[8];
+          document.getElementById("Status_real").innerHTML = tmpArray[6];
+          document.getElementById("Freq_real").innerHTML = tmpArray[7];
+          document.getElementById("Direction_real").innerHTML = tmpArray[8];
+          document.getElementById("Speed_current").innerHTML = tmpArray[9];
+          document.getElementById("Power_monitor").innerHTML = tmpArray[10];
+          document.getElementById("Current_monitor").innerHTML = tmpArray[11];
+          document.getElementById("Voltage_monitor").innerHTML = tmpArray[12];
         })
         .catch((error) => {
           console.error(
@@ -229,6 +235,11 @@ const char index_html[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
+void Control_RunStop(bool Status);
+void Frequency_setting(uint16_t Speed);
+void Select_Rotation_Direction(bool Status);
+void Operational_information_of_the_inverter(void);
+
 void setup()
 {
   Serial.begin(115200);
@@ -238,24 +249,22 @@ void setup()
   lcd.init();
   lcd.backlight();
 
+  lcd.setCursor(0, 0);
+  lcd.print("TT:");
+  lcd.setCursor(3, 0);
+  lcd.print("Dung");
+  lcd.setCursor(0, 1);
+  lcd.print("CD:");
+  lcd.setCursor(6, 1);
+  lcd.print("VT:");
+  lcd.setCursor(8, 0);
+  lcd.print("TD:");
+  lcd.setCursor(3, 1);
+  lcd.print(Count_Level);
+
   pinMode(Btn_Start, INPUT);
   pinMode(Btn_Up, INPUT);
   pinMode(Btn_Down, INPUT);
-
-  pinMode(Out_Start, OUTPUT);
-  pinMode(Out_Stop, OUTPUT);
-  digitalWrite(Out_Start, LOW);
-  digitalWrite(Out_Stop, LOW);
-
-  lcd.setCursor(0, 0);
-  lcd.print("Tt:"); // chay dừng
-  lcd.setCursor(0, 1);
-  lcd.print("Cq: "); // thuan nghich
-  lcd.setCursor(8, 0);
-  lcd.print("Ts:"); // 4000
-  Frequency_setting(0);
-  Select_Rotation_Direction(Forward);
-  Control_RunStop(Stop);
 
   // Connect to Wi-Fi
   WiFi.begin(ssid, password);
@@ -264,6 +273,7 @@ void setup()
     delay(1000);
     Serial.println("Connecting to WiFi..");
   }
+
   // Print ESP Local IP Address
   Serial.println(WiFi.localIP());
 
@@ -274,75 +284,129 @@ void setup()
   // Send a GET request to <ESP_IP>/toggle to toggle the output
   server.on("/Request_1=Status", HTTP_GET, [](AsyncWebServerRequest *request)
             { 
-              Count_Start++;
-              Count_Local = 2;
-              flag = true;
-              if (Count_Start >= 2)
-              {
-                Count_Start = 0;
-              }
-              request->send(200, "text/plain", "OK"); });
+            Count_Start++;
+            Count_Local = 2;
+            flag = true;
+            lcd.setCursor(10, 1);
+            lcd.print("Web");
+            if (Count_Start >= 2)
+            {
+              Count_Start = 0;
+            }
+            if (Count_Start == 1)
+            {
+              lcd.setCursor(3, 0);
+              lcd.print("Chay");
+            }
+            else
+            {
+              lcd.setCursor(3, 0);
+              lcd.print("Dung");
+            }
+            request->send(200, "text/plain", "OK"); });
 
   // Send a GET request to <ESP_IP>/toggle to toggle the output
   server.on("/Request_2=Status", HTTP_GET, [](AsyncWebServerRequest *request)
             { 
-              if (Count_Start == 0)
+             if (Count_Start == 0)
               {
                 Count_Level++;
                 Count_Local = 2;
+                lcd.setCursor(10, 1);
+                lcd.print("Web");
                 if (Count_Level >= 16)
                 {
                   Count_Level = 0;
                 }
+                lcd.setCursor(4, 1);
+                lcd.print("  ");
+                lcd.setCursor(3, 1);
+                lcd.print(Count_Level);
               }
-              request->send(200, "text/plain", "OK"); });
+            request->send(200, "text/plain", "OK"); });
 
   // Send a GET request to <ESP_IP>/toggle to toggle the output
   server.on("/Request_3=Status", HTTP_GET, [](AsyncWebServerRequest *request)
             { 
-              if (Count_Start == 0)
+            if (Count_Start == 0)
+            {
+              Count_Level--;
+              Count_Local = 2;
+              lcd.setCursor(10, 1);
+              lcd.print("Web");
+              if (Count_Level == 255)
               {
-                Count_Level--;
-                Count_Local = 2;
-                if (Count_Level == 255)
-                {
-                  Count_Level = 15;
-                }
+                Count_Level = 15;
               }
-              request->send(200, "text/plain", "OK"); });
+              lcd.setCursor(4, 1);
+              lcd.print("  ");
+              lcd.setCursor(3, 1);
+              lcd.print(Count_Level);
+            }
+            request->send(200, "text/plain", "OK"); });
 
   // Send a GET request to <ESP_IP>/state to get the output state
   server.on("/get_data", HTTP_GET, [](AsyncWebServerRequest *request)
             { 
-            if (Count_Start == 1)
-            {
-              inputStatus = "Chạy";
-            }else
-            {
-              inputStatus = "Dừng";
-            }
+              if (Count_Start == 1)
+              {
+                inputStatus = "Start";
+              }
+              else
+              {
+                inputStatus = "Stop";
+              }
 
-            if (Count_Local == 0)
-            {
-              inputLocal = "---";
-            }
-            else if (Count_Local == 1)
-            {
-              inputLocal = "Esp32 Hardware";
-            }
-            else if (Count_Local == 2)
-            {
-              inputLocal = "Web Esp32";
-            }
-            String response = String(inputStatus) + "|" + String(Count_Level)  + "|" + String(inputLocal) + "|" + String(inputLevel) + "|" + String(inputFreq);
+              if (Count_Local == 0)
+              {
+                inputLocal = "---";
+              }
+              else if (Count_Local == 1)
+              {
+                inputLocal = "Esp32 Hardware";
+              }
+              else if (Count_Local == 2)
+              {
+                inputLocal = "Web Esp32";
+              }
 
-            request->send(200, "text/plain", response); });
+              if (directions[Count_Level] == Forward)
+              {
+                inputDirectionset = "Quay thuận";
+              }else
+              {
+                inputDirectionset = "Quay Nghịch";
+              }
+              
+              if (Trang_thai == 1)
+              {
+                inputTrangthai = "Sẵn sàng";
+              }else
+              {
+                inputTrangthai = "Không sẵn sàng";
+              }
+
+              if (Chieu_quay_thuc_te == 1)
+              {
+                inputChieuquaythuc = "Quay thuận";
+              }else if (Chieu_quay_thuc_te == 2)
+              {
+               inputChieuquaythuc = "Quay nghịch";
+              }
+              else
+              {
+                inputChieuquaythuc = "Dừng";
+              }
+              
+              String response = String(inputStatus) + "|" + String(Count_Level) + "|" + String(inputLocal) + "|" + String(inputLevel)+ "|" + String(inputFreq) + "|" + String(inputDirectionset) + "|" + String(inputTrangthai) + "|" + String(Tan_so_thuc_te) + "|" + String(inputChieuquaythuc) + "|" + String(Speed_RPM) + "|" + String(Nguon) + "|" + String(Cuong_do) + "|" + String(Hieu_dien_the);
+              request->send(200, "text/plain", response); });
   // Start server
   server.begin();
 }
 
 void loop()
 {
+  // Read the state of all buttons
   Value_Start = digitalRead(Btn_Start);
   Value_Up = digitalRead(Btn_Up);
   Value_Down = digitalRead(Btn_Down);
@@ -355,6 +419,8 @@ void loop()
       Count_Start++;
       Count_Local = 1;
       flag = true;
+      lcd.setCursor(10, 1);
+      lcd.print("Esp32");
       if (Count_Start >= 2)
       {
         Count_Start = 0;
@@ -373,10 +439,16 @@ void loop()
       {
         Count_Level++;
         Count_Local = 1;
+        lcd.setCursor(10, 1);
+        lcd.print("Esp32");
         if (Count_Level >= 16)
         {
           Count_Level = 0;
         }
+        lcd.setCursor(4, 1);
+        lcd.print("  ");
+        lcd.setCursor(3, 1);
+        lcd.print(Count_Level);
       }
       delay(300); // Debounce delay
     }
@@ -392,10 +464,16 @@ void loop()
       {
         Count_Level--;
         Count_Local = 1;
+        lcd.setCursor(10, 1);
+        lcd.print("Esp32");
         if (Count_Level == 255)
         {
           Count_Level = 15;
         }
+        lcd.setCursor(4, 1);
+        lcd.print("  ");
+        lcd.setCursor(3, 1);
+        lcd.print(Count_Level);
       }
       delay(300); // Debounce delay
     }
@@ -406,196 +484,61 @@ void loop()
   {
     if (Count_Start == 1)
     {
-
-      switch (Count_Level)
-      {
-      case 0:
-        Frequency_setting(500);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("500");
-        inputFreq = 500;
-        break;
-
-      case 1:
-        Frequency_setting(1000);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("1000");
-        inputFreq = 1000;
-        break;
-
-      case 2:
-        Frequency_setting(1500);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("1500");
-        inputFreq = 1500;
-        break;
-
-      case 3:
-        Frequency_setting(2000);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("2000");
-        inputFreq = 2000;
-        break;
-
-      case 4:
-        Frequency_setting(2500);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("2500");
-        inputFreq = 2500;
-        break;
-
-      case 5:
-        Frequency_setting(3000);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("3000");
-        inputFreq = 3000;
-        break;
-
-      case 6:
-        Frequency_setting(3500);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("3500");
-        inputFreq = 3500;
-        break;
-
-      case 7:
-        Frequency_setting(4000);
-        Select_Rotation_Direction(Forward);
-        lcd.setCursor(4, 1);
-        lcd.print("Thuan ");
-        lcd.setCursor(11, 0);
-        lcd.print("4000");
-        inputFreq = 4000;
-        break;
-
-      case 8:
-        Frequency_setting(500);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("500");
-        inputFreq = 500;
-        break;
-
-      case 9:
-        Frequency_setting(1000);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("1000");
-        inputFreq = 1000;
-        break;
-
-      case 10:
-        Frequency_setting(1500);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("1500");
-        inputFreq = 1500;
-        break;
-
-      case 11:
-        Frequency_setting(2000);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("2000");
-        inputFreq = 2000;
-        break;
-
-      case 12:
-        Frequency_setting(2500);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("2500");
-        inputFreq = 2500;
-        break;
-
-      case 13:
-        Frequency_setting(3000);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("3000");
-        inputFreq = 3000;
-        break;
-
-      case 14:
-        Frequency_setting(3500);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("3500");
-        inputFreq = 3500;
-        break;
-
-      case 15:
-        Frequency_setting(4000);
-        Select_Rotation_Direction(Reverse);
-        lcd.setCursor(4, 1);
-        lcd.print("Nghich");
-        lcd.setCursor(11, 0);
-        lcd.print("4000");
-        inputFreq = 4000;
-        break;
-      default:
-        break;
-      }
       inputLevel = Count_Level;
+      inputFreq = frequencies[Count_Level];
+      Frequency_setting(frequencies[Count_Level]);
+      Select_Rotation_Direction(directions[Count_Level]);
       Control_RunStop(Run);
       lcd.setCursor(3, 0);
       lcd.print("Chay");
-      digitalWrite(Out_Stop, LOW);
-      digitalWrite(Out_Start, HIGH);
     }
     else
     {
-      inputFreq = 0;
       Frequency_setting(0);
-      Select_Rotation_Direction(Forward);
+      Select_Rotation_Direction(0);
       Control_RunStop(Stop);
-      lcd.setCursor(4, 1);
-      lcd.print("Thuan ");
-      lcd.setCursor(11, 0);
-      lcd.print("0");
       lcd.setCursor(3, 0);
       lcd.print("Dung");
-      digitalWrite(Out_Start, LOW);
-      digitalWrite(Out_Stop, HIGH);
     }
     flag = false;
   }
-  Operational_information_of_the_inverter();
+  else
+  {
+    if ((unsigned long)(millis() - timer1) > 1000)
+    {
+      Tan_so_thuc_te = node.readHoldingRegisters(0x1001, Slave_ID);
+      Tan_so_thuc_te = node.getResponseBuffer(Tan_so_thuc_te);
+      // Serial.print("Tstt: ");
+      // Serial.print(Tan_so_thuc_te);
+      // Serial.print(" ");
+      Chieu_quay_thuc_te = node.readHoldingRegisters(0x1004, Slave_ID);
+      Chieu_quay_thuc_te = node.getResponseBuffer(Chieu_quay_thuc_te);
+
+      Cap_cuc = node.readHoldingRegisters(0x1633, Slave_ID);
+      Cap_cuc = node.getResponseBuffer(Cap_cuc);
+
+      Speed_RPM = ((Tan_so_thuc_te * 120) / pole[Cap_cuc]);
+      lcd.setCursor(11, 0);
+      lcd.print("     ");
+      lcd.setCursor(11, 0);
+      lcd.print(Speed_RPM);
+
+      Trang_thai = node.readHoldingRegisters(0x0010U, Slave_ID);
+      Trang_thai = node.getResponseBuffer(Trang_thai);
+
+      Nguon = node.readHoldingRegisters(0x1012U, Slave_ID);
+      Nguon = node.getResponseBuffer(Nguon);
+
+      Cuong_do = node.readHoldingRegisters(0x1003U, Slave_ID);
+      Cuong_do = node.getResponseBuffer(Cuong_do);
+
+      Hieu_dien_the = node.readHoldingRegisters(0x1011U, Slave_ID);
+      Hieu_dien_the = node.getResponseBuffer(Hieu_dien_the);
+
+      //Serial.println(" ");
+      timer1 = millis();
+    }
+  }
 }
 
 void Control_RunStop(bool Status)
@@ -611,32 +554,4 @@ void Frequency_setting(uint16_t Speed)
 void Select_Rotation_Direction(bool Status)
 {
   node.writeSingleCoil(Rotation_direction_command, Status);
-}
-
-void Operational_information_of_the_inverter(void)
-{
-  Tan_so_thuc_te = node.readHoldingRegisters(0x1001, Slave_ID);
-  Tan_so_thuc_te = node.getResponseBuffer(Tan_so_thuc_te);
-  Serial.print("Tstt: ");
-  Serial.print(Tan_so_thuc_te);
-  Serial.print(" ");
-
-  Chieu_quay_thuc_te = node.readHoldingRegisters(0x1004, Slave_ID);
-  Chieu_quay_thuc_te = node.getResponseBuffer(Chieu_quay_thuc_te);
-  Serial.print("cqtt: ");
-  Serial.print(Chieu_quay_thuc_te);
-  Serial.print(" ");
-
-  Cap_cuc = node.readHoldingRegisters(0x1633, Slave_ID);
-  Cap_cuc = node.getResponseBuffer(Cap_cuc);
-  Serial.print("Cc: ");
-  Serial.print(Cap_cuc);
-  Serial.print(" ");
-
-  Speed_RPM = ((Tan_so_thuc_te * 120) / pole[Cap_cuc]);
-  Serial.print("rpm: ");
-  Serial.print(Cap_cuc);
-  Serial.print(" ");
-
-  Serial.println(" ");
 }

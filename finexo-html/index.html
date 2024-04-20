@@ -3,8 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Modbus RTU</title>
+
   <style>
     * {
       box-sizing: border-box;
@@ -109,6 +110,7 @@
               <strong>Vị trí điều khiển gần nhất: <span id="Local_control">---</span></strong>
             </div>
           </div>
+
           <div class="co">
             <div class="ca">
               <h3>Thông số cài đặt</h3>
@@ -117,14 +119,26 @@
               <p><strong>Chiều quay cài đặt: <span id="Direction_set">---</span></strong></p>
             </div>
           </div>
+
           <div class="co">
             <div class="ca">
               <h3>Thông số thực tế</h3>
+              <p><strong>Trạng Thái: <span id="Status_real">---</span>[Hz]</strong></p>
               <p><strong>Tần số thực tế: <span id="Freq_real">---</span>[Hz]</strong></p>
               <p><strong>Chiều quay thực: <span id="Direction_real">---</span></strong></p>
-              <p><strong>Vận tốc hiện tại: <span id="Speed_current">---</span>RPM</strong></p>
+              <p><strong>Vận tốc hiện tại: <span id="Speed_current">---</span>[RPM]</strong></p>
             </div>
           </div>
+
+          <div class="co">
+            <div class="ca">
+              <h3>Thông tin thêm</h3>
+              <p><strong>Nguồn điện: <span id="Power_monitor">---</span>[kW]</strong></p>
+              <p><strong>Cường độ dòng điện: <span id="Current_monitor">---</span> [A]</strong></p>
+              <p><strong>Hiệu điện thế: <span id="Voltage_monitor">---</span>[V]</strong></p>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -159,16 +173,20 @@
           return response.text();
         })
         .then((data) => {
-          var tmpArray = data.split("|", 9);
+          var tmpArray = data.split("|", 13);
           document.getElementById("Statusbt").innerHTML = tmpArray[0];
           document.getElementById("Levelbt").innerHTML = tmpArray[1];
           document.getElementById("Local_control").innerHTML = tmpArray[2];
           document.getElementById("Level_set").innerHTML = tmpArray[3];
           document.getElementById("Freq_set").innerHTML = tmpArray[4];
           document.getElementById("Direction_set").innerHTML = tmpArray[5];
-          document.getElementById("Freq_real").innerHTML = tmpArray[6];
-          document.getElementById("Direction_real").innerHTML = tmpArray[7];
-          document.getElementById("Speed_current").innerHTML = tmpArray[8];
+          document.getElementById("Status_real").innerHTML = tmpArray[6];
+          document.getElementById("Freq_real").innerHTML = tmpArray[7];
+          document.getElementById("Direction_real").innerHTML = tmpArray[8];
+          document.getElementById("Speed_current").innerHTML = tmpArray[9];
+          document.getElementById("Power_monitor").innerHTML = tmpArray[10];
+          document.getElementById("Current_monitor").innerHTML = tmpArray[11];
+          document.getElementById("Voltage_monitor").innerHTML = tmpArray[12];
         })
         .catch((error) => {
           console.error(
